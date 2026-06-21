@@ -3,94 +3,88 @@ using TodoApi.Models;
 
 namespace TodoApi.Services
 {
-    public class TodoService
+    public class TodoService : ITodoService
     {
-        private string _connectionString = "Data Source=todos.db";
+        private readonly string _connectionString;
 
-        public TodoService()
+        public TodoService(string connectionString)
         {
+            _connectionString = connectionString;
         }
 
         public Todo CreateTodo(Todo todo)
         {
+            var createdAt = DateTime.UtcNow;
+
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = $@"
+            command.CommandText = @"
                 INSERT INTO Todos (Title, Description, IsCompleted, CreatedAt)
-                VALUES ('{todo.Title}', '{todo.Description}', {(todo.IsCompleted ? 1 : 0)}, '{DateTime.UtcNow.ToString("o")}');
+                VALUES (@Title, @Description, @IsCompleted, @CreatedAt);
                 SELECT last_insert_rowid();
             ";
+            command.Parameters.AddWithValue("@Title", todo.Title);
+            command.Parameters.AddWithValue("@Description", (object?)todo.Description ?? DBNull.Value);
+            command.Parameters.AddWithValue("@IsCompleted", todo.IsCompleted ? 1 : 0);
+            command.Parameters.AddWithValue("@CreatedAt", createdAt.ToString("o"));
 
-            var id = Convert.ToInt32(command.ExecuteScalar());
-            todo.Id = id;
-            todo.CreatedAt = DateTime.UtcNow;
+            todo.Id = Convert.ToInt32(command.ExecuteScalar());
+            todo.CreatedAt = createdAt;
             return todo;
         }
 
         public List<Todo> GetAllTodos()
         {
             var todos = new List<Todo>();
+
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = "SELECT * FROM Todos";
+            command.CommandText = "SELECT Id, Title, Description, IsCompleted, CreatedAt FROM Todos";
 
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
-                todos.Add(new Todo
-                {
-                    Id = reader.GetInt32(0),
-                    Title = reader.GetString(1),
-                    Description = reader.GetString(2),
-                    IsCompleted = reader.GetInt32(3) == 1,
-                    CreatedAt = DateTime.Parse(reader.GetString(4))
-                });
+                todos.Add(MapTodo(reader));
             }
 
             return todos;
         }
 
-        public Todo GetTodoById(int id)
+        public Todo? GetTodoById(int id)
         {
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = $"SELECT * FROM Todos WHERE Id = {id}";
+            command.CommandText = "SELECT Id, Title, Description, IsCompleted, CreatedAt FROM Todos WHERE Id = @Id";
+            command.Parameters.AddWithValue("@Id", id);
 
             using var reader = command.ExecuteReader();
-            if (reader.Read())
-            {
-                return new Todo
-                {
-                    Id = reader.GetInt32(0),
-                    Title = reader.GetString(1),
-                    Description = reader.GetString(2),
-                    IsCompleted = reader.GetInt32(3) == 1,
-                    CreatedAt = DateTime.Parse(reader.GetString(4))
-                };
-            }
-
-            return null;
+            return reader.Read() ? MapTodo(reader) : null;
         }
 
-        public Todo UpdateTodo(int id, Todo todo)
+        public Todo? UpdateTodo(int id, Todo todo)
         {
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = $@"
+            command.CommandText = @"
                 UPDATE Todos
-                SET Title = '{todo.Title}', Description = '{todo.Description}', IsCompleted = {(todo.IsCompleted ? 1 : 0)}
-                WHERE Id = {id}
+                SET Title = @Title, Description = @Description, IsCompleted = @IsCompleted
+                WHERE Id = @Id
             ";
+            command.Parameters.AddWithValue("@Title", todo.Title);
+            command.Parameters.AddWithValue("@Description", (object?)todo.Description ?? DBNull.Value);
+            command.Parameters.AddWithValue("@IsCompleted", todo.IsCompleted ? 1 : 0);
+            command.Parameters.AddWithValue("@Id", id);
 
             var rowsAffected = command.ExecuteNonQuery();
+            if (rowsAffected == 0) return null;
 
             todo.Id = id;
             return todo;
@@ -102,10 +96,21 @@ namespace TodoApi.Services
             connection.Open();
 
             var command = connection.CreateCommand();
-            command.CommandText = $"DELETE FROM Todos WHERE Id = {id}";
+            command.CommandText = "DELETE FROM Todos WHERE Id = @Id";
+            command.Parameters.AddWithValue("@Id", id);
 
-            var rowsAffected = command.ExecuteNonQuery();
-            return rowsAffected > 0;
+            return command.ExecuteNonQuery() > 0;
         }
+
+        private static Todo MapTodo(SqliteDataReader reader) => new Todo
+        {
+            Id = reader.GetInt32(reader.GetOrdinal("Id")),
+            Title = reader.GetString(reader.GetOrdinal("Title")),
+            Description = reader.IsDBNull(reader.GetOrdinal("Description"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("Description")),
+            IsCompleted = reader.GetInt32(reader.GetOrdinal("IsCompleted")) == 1,
+            CreatedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("CreatedAt")))
+        };
     }
 }
