@@ -26,12 +26,19 @@ public class TodoControllerTests
     {
         var todo = new Todo { Title = "Test", Description = "Desc" };
         var created = new Todo { Id = 1, Title = "Test", Description = "Desc" };
-        _mockService.Setup(s => s.CreateTodo(todo)).Returns(created);
+ 
+        _mockService.Setup(s => s.CreateTodo(todo));
+        _mockService.Setup(s => s.GetTodoById(todo.Id)).Returns(created);
  
         var result = _controller.CreateTodo(todo) as CreatedAtActionResult;
  
         Assert.NotNull(result);
         Assert.Equal(201, result.StatusCode);
+ 
+        var response = result.Value as ApiResponse<Todo>;
+        Assert.NotNull(response);
+        Assert.True(response.Success);
+        Assert.Equal(created, response.Data);
     }
  
     [Fact]
@@ -44,6 +51,11 @@ public class TodoControllerTests
  
         Assert.NotNull(result);
         Assert.Equal(200, result.StatusCode);
+ 
+        var response = result.Value as ApiResponse<List<Todo>>;
+        Assert.NotNull(response);
+        Assert.True(response.Success);
+        Assert.Equal(todos, response.Data);
     }
  
     [Fact]
@@ -56,6 +68,11 @@ public class TodoControllerTests
  
         Assert.NotNull(result);
         Assert.Equal(200, result.StatusCode);
+ 
+        var response = result.Value as ApiResponse<Todo>;
+        Assert.NotNull(response);
+        Assert.True(response.Success);
+        Assert.Equal(todo, response.Data);
     }
  
     [Fact]
@@ -63,43 +80,62 @@ public class TodoControllerTests
     {
         _mockService.Setup(s => s.GetTodoById(9999)).Returns((Todo?)null);
  
-        var result = _controller.GetTodoById(9999);
+        var result = _controller.GetTodoById(9999) as NotFoundObjectResult;
  
-        Assert.IsType<NotFoundResult>(result);
+        Assert.NotNull(result);
+        Assert.Equal(404, result.StatusCode);
+ 
+        var response = result.Value as ApiResponse<Todo>;
+        Assert.NotNull(response);
+        Assert.False(response.Success);
+        Assert.NotNull(response.Message);
     }
  
     [Fact]
     public void UpdateTodo_Returns200_WhenUpdated()
     {
         var request = new UpdateTodoRequest { Title = "Updated", Description = "Desc", IsCompleted = true };
-        var updated = new Todo { Id = 1, Title = "Updated" };
-        _mockService.Setup(s => s.UpdateTodo(1, It.IsAny<Todo>())).Returns(updated);
+        _mockService.Setup(s => s.UpdateTodo(1, It.IsAny<Todo>())).Returns(true);
  
         var result = _controller.UpdateTodo(1, request) as OkObjectResult;
  
         Assert.NotNull(result);
         Assert.Equal(200, result.StatusCode);
+ 
+        var response = result.Value as ApiResponse<string>;
+        Assert.NotNull(response);
+        Assert.True(response.Success);
     }
  
     [Fact]
     public void UpdateTodo_Returns404_WhenNotFound()
     {
         var request = new UpdateTodoRequest { Title = "Ghost", Description = "Desc" };
-        _mockService.Setup(s => s.UpdateTodo(9999, It.IsAny<Todo>())).Returns((Todo?)null);
+        _mockService.Setup(s => s.UpdateTodo(9999, It.IsAny<Todo>())).Returns(false);
  
-        var result = _controller.UpdateTodo(9999, request);
+        var result = _controller.UpdateTodo(9999, request) as NotFoundObjectResult;
  
-        Assert.IsType<NotFoundResult>(result);
+        Assert.NotNull(result);
+        Assert.Equal(404, result.StatusCode);
+ 
+        var response = result.Value as ApiResponse<Todo>;
+        Assert.NotNull(response);
+        Assert.False(response.Success);
     }
  
     [Fact]
-    public void DeleteTodo_Returns204_WhenDeleted()
+    public void DeleteTodo_Returns200_WhenDeleted()
     {
         _mockService.Setup(s => s.DeleteTodo(1)).Returns(true);
  
-        var result = _controller.DeleteTodo(1);
+        var result = _controller.DeleteTodo(1) as OkObjectResult;
  
-        Assert.IsType<NoContentResult>(result);
+        Assert.NotNull(result);
+        Assert.Equal(200, result.StatusCode);
+ 
+        var response = result.Value as ApiResponse<string>;
+        Assert.NotNull(response);
+        Assert.True(response.Success);
     }
  
     [Fact]
@@ -107,8 +143,13 @@ public class TodoControllerTests
     {
         _mockService.Setup(s => s.DeleteTodo(9999)).Returns(false);
  
-        var result = _controller.DeleteTodo(9999);
+        var result = _controller.DeleteTodo(9999) as NotFoundObjectResult;
  
-        Assert.IsType<NotFoundResult>(result);
+        Assert.NotNull(result);
+        Assert.Equal(404, result.StatusCode);
+ 
+        var response = result.Value as ApiResponse<Todo>;
+        Assert.NotNull(response);
+        Assert.False(response.Success);
     }
 }
