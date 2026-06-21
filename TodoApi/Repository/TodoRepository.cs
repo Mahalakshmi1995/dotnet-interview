@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using TodoApi.Db;
 using TodoApi.Models;
 using static TodoApi.Db.TodoDbcontext;
@@ -13,30 +14,30 @@ namespace TodoApi.Repositories
             _context = context;
         }
 
-        public void Create(Todo todo)
+        public async Task CreateAsync(Todo todo)
         {
             todo.CreatedAt = DateTime.UtcNow;
             _context.Todos.Add(todo);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
         }
 
-        public List<Todo> GetAll()
+        public async Task<List<Todo>> GetAllAsync()
         {
-            return _context.Todos
+            return await _context.Todos
                 .Where(t => !t.IsDeleted)
-                .ToList();
+                .ToListAsync();
         }
 
-        public Todo? GetById(int id)
+        public async Task<Todo?> GetByIdAsync(int id)
         {
-            return _context.Todos
-                .FirstOrDefault(t => t.Id == id && !t.IsDeleted);
+            return await _context.Todos
+                .FirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted);
         }
 
-        public bool Update(int id, Todo todo)
+        public async Task<bool> UpdateAsync(int id, Todo todo)
         {
-            var existing = _context.Todos
-                .FirstOrDefault(t => t.Id == id && !t.IsDeleted);
+            var existing = await _context.Todos
+                .FirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted);
 
             if (existing is null) return false;
 
@@ -45,19 +46,19 @@ namespace TodoApi.Repositories
             existing.IsCompleted = todo.IsCompleted;
             existing.UpdatedAt = DateTime.UtcNow;
 
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             return true;
         }
 
-        public bool Delete(int id)
+        public async Task<bool> DeleteAsync(int id)
         {
-            var existing = _context.Todos
-                .FirstOrDefault(t => t.Id == id && !t.IsDeleted);
+            var existing = await _context.Todos
+                .FirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted);
 
             if (existing is null) return false;
 
             existing.IsDeleted = true;
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             return true;
         }
     }

@@ -1,4 +1,3 @@
-using Xunit;
 using Moq;
 using TodoApi.Services;
 using TodoApi.Repositories;
@@ -18,82 +17,82 @@ public class TodoServiceTests
     }
 
     [Fact]
-    public void CreateTodo_CallsRepositoryCreate()
+    public async Task CreateTodoAsync_CallsRepositoryCreate()
     {
         var todo = new Todo { Title = "Test", Description = "Desc" };
 
-        _service.CreateTodo(todo);
+        await _service.CreateTodoAsync(todo);
 
-        _mockRepository.Verify(r => r.Create(todo), Times.Once);
+        _mockRepository.Verify(r => r.CreateAsync(todo), Times.Once);
     }
 
     [Fact]
-    public void GetAllTodos_CallsRepositoryGetAll_AndReturnsResult()
+    public async Task GetAllTodosAsync_CallsRepositoryGetAll_AndReturnsResult()
     {
         var todos = new List<Todo> { new Todo { Id = 1, Title = "Test" } };
-        _mockRepository.Setup(r => r.GetAll()).Returns(todos);
+        _mockRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(todos);
 
-        var result = _service.GetAllTodos();
+        var result = await _service.GetAllTodosAsync();
 
         Assert.Equal(todos, result);
-        _mockRepository.Verify(r => r.GetAll(), Times.Once);
+        _mockRepository.Verify(r => r.GetAllAsync(), Times.Once);
     }
 
     [Fact]
-    public void GetTodoById_CallsRepositoryGetById_AndReturnsResult()
+    public async Task GetTodoByIdAsync_CallsRepositoryGetById_AndReturnsResult()
     {
         var todo = new Todo { Id = 1, Title = "Test" };
-        _mockRepository.Setup(r => r.GetById(1)).Returns(todo);
+        _mockRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(todo);
 
-        var result = _service.GetTodoById(1);
+        var result = await _service.GetTodoByIdAsync(1);
 
         Assert.Equal(todo, result);
-        _mockRepository.Verify(r => r.GetById(1), Times.Once);
+        _mockRepository.Verify(r => r.GetByIdAsync(1), Times.Once);
     }
 
     [Fact]
-    public void UpdateTodo_CallsRepositoryUpdate_AndReturnsTrue_WhenExists()
+    public async Task UpdateTodoAsync_CallsRepositoryUpdate_AndReturnsTrue_WhenExists()
     {
         var todo = new Todo { Title = "Updated" };
-        _mockRepository.Setup(r => r.Update(1, todo)).Returns(true);
+        _mockRepository.Setup(r => r.UpdateAsync(1, todo)).ReturnsAsync(true);
 
-        var result = _service.UpdateTodo(1, todo);
+        var result = await _service.UpdateTodoAsync(1, todo);
 
         Assert.True(result);
-        _mockRepository.Verify(r => r.Update(1, todo), Times.Once);
+        _mockRepository.Verify(r => r.UpdateAsync(1, todo), Times.Once);
     }
 
     [Fact]
-    public void UpdateTodo_CallsRepositoryUpdate_AndReturnsFalse_WhenNotFound()
+    public async Task UpdateTodoAsync_CallsRepositoryUpdate_AndReturnsFalse_WhenNotFound()
     {
         var todo = new Todo { Title = "Ghost" };
-        _mockRepository.Setup(r => r.Update(9999, todo)).Returns(false);
+        _mockRepository.Setup(r => r.UpdateAsync(9999, todo)).ReturnsAsync(false);
 
-        var result = _service.UpdateTodo(9999, todo);
+        var result = await _service.UpdateTodoAsync(9999, todo);
 
         Assert.False(result);
-        _mockRepository.Verify(r => r.Update(9999, todo), Times.Once);
+        _mockRepository.Verify(r => r.UpdateAsync(9999, todo), Times.Once);
     }
 
     [Fact]
-    public void DeleteTodo_CallsRepositoryDelete_AndReturnsTrue_WhenDeleted()
+    public async Task DeleteTodoAsync_CallsRepositoryDelete_AndReturnsTrue_WhenDeleted()
     {
-        _mockRepository.Setup(r => r.Delete(1)).Returns(true);
+        _mockRepository.Setup(r => r.DeleteAsync(1)).ReturnsAsync(true);
 
-        var result = _service.DeleteTodo(1);
+        var result = await _service.DeleteTodoAsync(1);
 
         Assert.True(result);
-        _mockRepository.Verify(r => r.Delete(1), Times.Once);
+        _mockRepository.Verify(r => r.DeleteAsync(1), Times.Once);
     }
 
     [Fact]
-    public void DeleteTodo_CallsRepositoryDelete_AndReturnsFalse_WhenNotFound()
+    public async Task DeleteTodoAsync_CallsRepositoryDelete_AndReturnsFalse_WhenNotFound()
     {
-        _mockRepository.Setup(r => r.Delete(9999)).Returns(false);
+        _mockRepository.Setup(r => r.DeleteAsync(9999)).ReturnsAsync(false);
 
-        var result = _service.DeleteTodo(9999);
+        var result = await _service.DeleteTodoAsync(9999);
 
         Assert.False(result);
-        _mockRepository.Verify(r => r.Delete(9999), Times.Once);
+        _mockRepository.Verify(r => r.DeleteAsync(9999), Times.Once);
     }
 }

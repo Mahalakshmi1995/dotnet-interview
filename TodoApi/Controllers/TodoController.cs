@@ -1,30 +1,40 @@
 using Microsoft.AspNetCore.Mvc;
 using TodoApi.Models;
 using TodoApi.Services;
- 
+
 namespace TodoApi.Controllers
 {
+    /// <summary>
+    /// Manages Todo items
+    /// </summary>
     [ApiController]
     [Route("api/todos")]
+    [Produces("application/json")]
     public class TodoController : ControllerBase
     {
         private readonly ITodoService _todoService;
         private readonly ILogger<TodoController> _logger;
- 
+
         public TodoController(ITodoService todoService, ILogger<TodoController> logger)
         {
             _todoService = todoService;
             _logger = logger;
         }
- 
-        // POST api/todos
+
+        /// <summary>Creates a new todo item</summary>
+        /// <response code="201">Todo created successfully</response>
+        /// <response code="400">Invalid input data</response>
+        /// <response code="500">Internal server error</response>
         [HttpPost]
-        public IActionResult CreateTodo([FromBody] Todo todo)
+        [ProducesResponseType(typeof(ApiResponse<Todo>), 201)]
+        [ProducesResponseType(typeof(ApiResponse<Todo>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<Todo>), 500)]
+        public async Task<IActionResult> CreateTodo([FromBody] Todo todo)
         {
             try
             {
-                _todoService.CreateTodo(todo);
-                var created = _todoService.GetTodoById(todo.Id);
+                await _todoService.CreateTodoAsync(todo);
+                var created = await _todoService.GetTodoByIdAsync(todo.Id);
                 return CreatedAtAction(nameof(GetTodoById), new { id = created!.Id },
                     ApiResponse<Todo>.Ok(created));
             }
@@ -34,14 +44,18 @@ namespace TodoApi.Controllers
                 return StatusCode(500, ApiResponse<Todo>.Fail("An unexpected error occurred"));
             }
         }
- 
-        // GET api/todos
+
+        /// <summary>Retrieves all todo items</summary>
+        /// <response code="200">Returns the list of todos</response>
+        /// <response code="500">Internal server error</response>
         [HttpGet]
-        public IActionResult GetAllTodos()
+        [ProducesResponseType(typeof(ApiResponse<List<Todo>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<List<Todo>>), 500)]
+        public async Task<IActionResult> GetAllTodos()
         {
             try
             {
-                var todos = _todoService.GetAllTodos();
+                var todos = await _todoService.GetAllTodosAsync();
                 return Ok(ApiResponse<List<Todo>>.Ok(todos));
             }
             catch (Exception ex)
@@ -50,17 +64,23 @@ namespace TodoApi.Controllers
                 return StatusCode(500, ApiResponse<List<Todo>>.Fail("An unexpected error occurred"));
             }
         }
- 
-        // GET api/todos/{id}
+
+        /// <summary>Retrieves a todo item by ID</summary>
+        /// <response code="200">Returns the todo item</response>
+        /// <response code="404">Todo not found</response>
+        /// <response code="500">Internal server error</response>
         [HttpGet("{id:int}")]
-        public IActionResult GetTodoById(int id)
+        [ProducesResponseType(typeof(ApiResponse<Todo>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<Todo>), 404)]
+        [ProducesResponseType(typeof(ApiResponse<Todo>), 500)]
+        public async Task<IActionResult> GetTodoById(int id)
         {
             try
             {
-                var todo = _todoService.GetTodoById(id);
+                var todo = await _todoService.GetTodoByIdAsync(id);
                 if (todo is null)
                     return NotFound(ApiResponse<Todo>.Fail($"Todo with id {id} not found"));
- 
+
                 return Ok(ApiResponse<Todo>.Ok(todo));
             }
             catch (Exception ex)
@@ -69,10 +89,16 @@ namespace TodoApi.Controllers
                 return StatusCode(500, ApiResponse<Todo>.Fail("An unexpected error occurred"));
             }
         }
- 
-        // PUT api/todos/{id}
+
+        /// <summary>Updates an existing todo item</summary>
+        /// <response code="200">Todo updated successfully</response>
+        /// <response code="404">Todo not found</response>
+        /// <response code="500">Internal server error</response>
         [HttpPut("{id:int}")]
-        public IActionResult UpdateTodo(int id, [FromBody] UpdateTodoRequest request)
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 404)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 500)]
+        public async Task<IActionResult> UpdateTodo(int id, [FromBody] UpdateTodoRequest request)
         {
             try
             {
@@ -82,11 +108,11 @@ namespace TodoApi.Controllers
                     Description = request.Description,
                     IsCompleted = request.IsCompleted
                 };
- 
-                var updated = _todoService.UpdateTodo(id, todo);
+
+                var updated = await _todoService.UpdateTodoAsync(id, todo);
                 if (!updated)
                     return NotFound(ApiResponse<Todo>.Fail($"Todo with id {id} not found"));
- 
+
                 return Ok(ApiResponse<string>.Ok("Todo updated successfully"));
             }
             catch (Exception ex)
@@ -95,17 +121,23 @@ namespace TodoApi.Controllers
                 return StatusCode(500, ApiResponse<Todo>.Fail("An unexpected error occurred"));
             }
         }
- 
-        // DELETE api/todos/{id}
+
+        /// <summary>Soft deletes a todo item</summary>
+        /// <response code="200">Todo deleted successfully</response>
+        /// <response code="404">Todo not found</response>
+        /// <response code="500">Internal server error</response>
         [HttpDelete("{id:int}")]
-        public IActionResult DeleteTodo(int id)
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 404)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 500)]
+        public async Task<IActionResult> DeleteTodo(int id)
         {
             try
             {
-                var deleted = _todoService.DeleteTodo(id);
+                var deleted = await _todoService.DeleteTodoAsync(id);
                 if (!deleted)
                     return NotFound(ApiResponse<Todo>.Fail($"Todo with id {id} not found"));
- 
+
                 return Ok(ApiResponse<string>.Ok("Todo deleted successfully"));
             }
             catch (Exception ex)
