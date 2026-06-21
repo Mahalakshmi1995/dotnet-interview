@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using TodoApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +11,13 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-InitializeDatabase();
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+builder.Services.AddSingleton(connectionString);
+builder.Services.AddScoped<ITodoService,TodoService>();
+
+InitializeDatabase(connectionString, app.Logger);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -27,9 +34,10 @@ app.MapControllers();
 
 app.Run();
 
-void InitializeDatabase()
+void InitializeDatabase(string connStr, ILogger logger)
 {
-    var connectionString = "Data Source=todos.db";
+    try
+    {
     using var connection = new SqliteConnection(connectionString);
     connection.Open();
 
@@ -45,5 +53,12 @@ void InitializeDatabase()
     ";
     command.ExecuteNonQuery();
 
-    Console.WriteLine("Database initialized successfully");
+    logger.LogInformation("Database initialized successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Database initialization failed");
+        throw;
+    }
+    
 }
